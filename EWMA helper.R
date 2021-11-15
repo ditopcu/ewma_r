@@ -1,9 +1,10 @@
+#Load packages 
 library(tidyverse)
 library(data.table)
 library(qcc)
 
 
-
+# definations for lambda sequence
 lambda_seq_01 <- c(0.1)
 lambda_seq_03  <- c(0.1, 0.5, 0.9)
 lambda_seq_all <- c(0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9)
@@ -24,9 +25,6 @@ sample_TE <-readRDS("sample_TE.RDS")
 
 
 # Programming related functions -----------------------------------------------------
-
-
-
 
 group_nest_dt <- function(dt, ..., .key = "data"){
   stopifnot(is.data.table(dt))
@@ -62,9 +60,7 @@ gen_sim_norm_data <- function(days, n, res_mean, res_sd) {
 
 #Generates test name based simulation data with adding TEa values with virtual days
 generate_sim_data <- function(days, n, source_df, TE_df) {
-  
-  
-  
+
   generated_data <- source_df %>%
     nest(ref_data = c(mean_res, sd_res))  |> 
     mutate(ri = map(ref_data, ~(gen_sim_norm_data(days,n, .x$mean_res, .x$sd_res)) )) |> 
@@ -83,14 +79,13 @@ add_error <- function(df, tea, tea_n, error_point, error_direction) {
   
   te_seq <-  seq(0, tea, by = (tea  - 0) / (tea_n-1))
   
-  # SD aralığına göre data.table oluştur  
+  # Create data.table according to SE sequence 
   temp <- data.table(SE = te_seq)
   
-  # Her SD'ye veriyi ekle
+  # Add results into each SE column
   temp[, result_data := list(data.table(df))]
   
   temp_2 <- unnest_dt_2(temp, result_data, list(SE))
-  
 
   temp_2[,result_final := fifelse(id_day < error_point,result_num,result_num  +  result_num * SE/100 * (error_direction))] |> 
     tibble() |> 
@@ -108,8 +103,8 @@ add_error <- function(df, tea, tea_n, error_point, error_direction) {
 
 calculate_ewma_multi_lambda_multi_day <- function(ewma_data, lambda_list = c(0.1, 0.9)) {
   
-  temp <- tibble(lambda =  lambda_list) %>% 
-    mutate(ewma_result = map(lambda_list, ~calculate_ewma_multi_day(ewma_data, .x))) %>% 
+  temp <- tibble(lambda =  lambda_list) |>  
+    mutate(ewma_result = map(lambda_list, ~calculate_ewma_multi_day(ewma_data, .x))) |> 
     unnest(cols = c(ewma_result))
   
   temp 
@@ -118,12 +113,10 @@ calculate_ewma_multi_lambda_multi_day <- function(ewma_data, lambda_list = c(0.1
 
 calculate_ewma_multi_day<- function(ewma_data, lambda  = 0.1) {
   
-  
-  
   ewma_data |>  
     group_by(day, mean_res, sd_res) |> 
     nest() |>  
-    mutate(ewma_result = map(data, ~calculate_ewma(.x, lam = lambda, mean_res, sd_res, day) ))  %>% 
+    mutate(ewma_result = map(data, ~calculate_ewma(.x, lam = lambda, mean_res, sd_res, day) ))  |>  
     select(-data) |> 
     unnest(cols = ewma_result)
   
@@ -134,7 +127,7 @@ calculate_ewma_multi_day<- function(ewma_data, lambda  = 0.1) {
 calculate_ewma <- function(df,  lam, mean_test, sd_test, cur_SE = NULL, cur_day = NULL, test_name = NULL)    {
   
   
-  if (FALSE)  print(paste0(test_name, " Lambda: ", lam,  " Day :", cur_day))
+  if (FALSE)  print(paste0(test_name, " Lambda: ", lam,  " Day :", cur_day)) # debuging
   
   ewma_result <- ewma(df$result_final, plot = FALSE, center = mean_test, std.dev = sd_test, sizes = 1, lambda = lam, 
                       nsigmas = get_nsigma(lam) )
@@ -153,10 +146,7 @@ calculate_ewma <- function(df,  lam, mean_test, sd_test, cur_SE = NULL, cur_day 
   ewma_data <- data.table(old_id_day, y, LCL, UCL,error_low, error_high)
   setnames(ewma_data, "old_id_day", "id_day")
   ewma_data
-  
-  
-  
-  
+ 
   
 } 
 
@@ -164,8 +154,6 @@ calculate_ewma <- function(df,  lam, mean_test, sd_test, cur_SE = NULL, cur_day 
 
 
 # Calculates ANPed MNPed --------------------------------------------------
-
-
 calculate_ewma_stats <- function(ewma_result_df) {
   
   
@@ -174,9 +162,7 @@ calculate_ewma_stats <- function(ewma_result_df) {
     select(-error_low, -error_high) |> 
     filter(id_day >= error_point) |> 
     filter(error) 
-  
-  
-  
+
   if (nrow(temp_df) == 0) {
     
     stats <- ewma_result %>%
