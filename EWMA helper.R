@@ -61,7 +61,7 @@ gen_sim_norm_data <- function(days, n, res_mean, res_sd) {
 #Generates test name based simulation data with adding TEa values with virtual days
 generate_sim_data <- function(days, n, source_df, TE_df) {
 
-  generated_data <- source_df %>%
+  generated_data <- source_df |>
     nest(ref_data = c(mean_res, sd_res))  |> 
     mutate(ri = map(ref_data, ~(gen_sim_norm_data(days,n, .x$mean_res, .x$sd_res)) )) |> 
     select(test_name, ri) |> 
@@ -165,10 +165,10 @@ calculate_ewma_stats <- function(ewma_result_df) {
 
   if (nrow(temp_df) == 0) {
     
-    stats <- ewma_result %>%
-      filter(id_day >= error_point) %>% 
-      select(test_name, tea, SE, error_point, error_direction, lambda) %>% 
-      mutate(days_with_error  = 0, ANPed  = NA_real_, MNPed  = NA_real_, min_min_err  = NA_real_, max_min_err = NA_real_) %>% 
+    stats <- ewma_result |>
+      filter(id_day >= error_point) |> 
+      select(test_name, tea, SE, error_point, error_direction, lambda) |>
+      mutate(days_with_error  = 0, ANPed  = NA_real_, MNPed  = NA_real_, min_min_err  = NA_real_, max_min_err = NA_real_) |>
       distinct()
     
     # test_name   tea    SE error_point error_direction lambda days_with_error ANPed MNPed min_min_err max_min_err
@@ -177,18 +177,18 @@ calculate_ewma_stats <- function(ewma_result_df) {
   } else {
     
     
-    stat_daily <- temp_df %>% 
+    stat_daily <- temp_df |>
       group_by(test_name, tea, SE, error_point, error_direction, lambda, day) |> 
-      filter( row_number() == min( row_number() )) %>% 
-      mutate(min_error = id_day - error_point ) %>% 
+      filter( row_number() == min( row_number() )) |> 
+      mutate(min_error = id_day - error_point ) |>
       ungroup()
     
-    stat_all <- stat_daily %>%
+    stat_all <- stat_daily |>
       group_by(test_name, tea, SE, error_point, error_direction, lambda) |> 
       summarise(
         days_with_error = n(), ANPed = mean(min_error), MNPed = median(min_error),
         min_min_err = min(min_error), max_min_err = max(min_error)
-      ) %>%
+      ) |>
       ungroup()
     
   }
